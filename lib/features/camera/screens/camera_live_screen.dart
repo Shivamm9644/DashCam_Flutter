@@ -270,8 +270,8 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
                     const SizedBox(width: 4),
                     Text(
                       isDeviceOnline
-                          ? (isWifi ? 'WiFi Direct (${dp.deviceIp})' : '4G Cloud: 100.31.90.51:10780 (JT1078) • 25 fps')
-                          : 'Camera Offline • Standby (Server: 100.31.90.51)',
+                          ? (isWifi ? 'WiFi Direct' : '4G Cloud Live • 25 fps')
+                          : 'Camera Offline • Standby',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDeviceOnline ? AppTheme.accentGreen : AppTheme.textMuted,
@@ -671,7 +671,7 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                'JT1078 Stream: 100.31.90.51:10780/live/${dp.systemStatus.imei}/ch${isRoad ? 1 : 2}',
+                'Live Feed: CH${isRoad ? 1 : 2} • 1080P FHD',
                 style: const TextStyle(
                   color: AppTheme.accentCyan,
                   fontSize: 10,
@@ -945,7 +945,7 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
                         ),
                       ),
                       const Text(
-                        'Central MDVR Server: 100.31.90.51:8080',
+                        'Central MDVR Cloud Relay',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppTheme.textMuted,
@@ -1213,8 +1213,8 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
               ],
             ),
             const SizedBox(height: 12),
-            _infoItem('Server Gateway', isWifi ? '192.168.1.1:8080 (Local Hotspot)' : '100.31.90.51:8080 (Inurum Cloud)'),
-            _infoItem('Device Stream Endpoint', dp.customStreamUrl),
+            _infoItem('Server Gateway', isWifi ? 'Local Hotspot Gateway' : 'Inurum Cloud Relay (Secure SSL)'),
+            _infoItem('Device Stream Pipe', isDeviceOnline ? 'Active Encrypted HLS (CH ${dp.activeChannel})' : 'Standby'),
             _infoItem('Resolution / Codec', '${dp.streamQuality} • H.264 / AAC'),
             _infoItem('Network Latency', isWifi ? '32ms (Direct Hotspot)' : '64ms (Cloud Server Relay)'),
             _infoItem('Terminal ID', dp.systemStatus.imei),
@@ -1262,7 +1262,7 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
             _buildStepRow(
               step: '1',
               title: 'Dashcam Power & 4G Cloud Handshake',
-              desc: 'Connect the dashcam to vehicle ignition or 12V adapter. Device boots up, activates 4G cellular data, and initiates TCP/JT808 connection with central Inurum MDVR server (100.31.90.51:8080).',
+              desc: 'Connect the dashcam to vehicle ignition or 12V adapter. Device boots up, activates 4G cellular data, and initiates TCP/JT808 connection with central Inurum MDVR cloud server.',
             ),
             const SizedBox(height: 10),
             _buildStepRow(
@@ -1291,7 +1291,7 @@ class _CameraLiveScreenState extends State<CameraLiveScreen>
                     onPressed: () {
                       dp.setConnectionMode('CLOUD_4G');
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Switched to Cloud 4G Server Mode (100.31.90.51:8080)')),
+                        const SnackBar(content: Text('Switched to Cloud 4G Server Mode')),
                       );
                     },
                   ),

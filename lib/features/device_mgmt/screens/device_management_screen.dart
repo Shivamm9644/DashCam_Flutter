@@ -100,7 +100,7 @@ class _DeviceManagementScreenState extends State<DeviceManagementScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isCloud ? '100.31.90.51:8080 (Cloud)' : '${dp.deviceIp} (Hotspot)',
+                      isCloud ? 'Inurum Cloud Server (Secure)' : '${dp.deviceIp} (Hotspot)',
                       style: TextStyle(
                         fontSize: 11,
                         color: isCloud ? AppTheme.accentCyan : AppTheme.accentOrange,

@@ -255,7 +255,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                     ),
                     const SizedBox(width: 6),
                     const Text(
-                      'Server: 100.31.90.51:7800 • Awaiting Heartbeat',
+                      'Connecting to Live Cloud Feed • Awaiting Heartbeat',
                       style: TextStyle(
                         color: Color(0xFF94A3B8),
                         fontSize: 10,

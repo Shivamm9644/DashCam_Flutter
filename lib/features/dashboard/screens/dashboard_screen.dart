@@ -261,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       StatCard(
                         label: 'Telemetry',
                         value: dash.telemetryFreshness,
-                        subtitle: 'JT/T 808 TCP 7800',
+                        subtitle: 'JT/T 808 Cloud Sync',
                         icon: Icons.satellite_alt_rounded,
                         iconColor: AppTheme.accentGreen,
                       ),
