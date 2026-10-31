@@ -90,10 +90,10 @@ class DeviceProvider extends ChangeNotifier {
         if (res.containsKey('url') && res['url'] != null) {
           customStreamUrl = res['url'].toString();
         } else {
-          customStreamUrl = 'http://100.31.90.51:8080/api/v1/devices/${systemStatus.imei}/live-stream?cameraId=$chIndex';
+          customStreamUrl = 'http://3.85.81.10:8080/api/v1/devices/${systemStatus.imei}/live-stream?cameraId=$chIndex';
         }
       } catch (_) {
-        customStreamUrl = 'http://100.31.90.51:8080/api/v1/devices/${systemStatus.imei}/live-stream?cameraId=$chIndex';
+        customStreamUrl = 'http://3.85.81.10:8080/api/v1/devices/${systemStatus.imei}/live-stream?cameraId=$chIndex';
       }
     } else {
       if (channel == 1) {
@@ -169,13 +169,13 @@ class DeviceProvider extends ChangeNotifier {
         if (res.containsKey('url') && res['url'] != null) {
           customStreamUrl = res['url'].toString();
         } else {
-          customStreamUrl = 'http://100.31.90.51:8080/api/v1/devices/$terminalId/live-stream?cameraId=$chIndex';
+          customStreamUrl = 'http://3.85.81.10:8080/api/v1/devices/$terminalId/live-stream?cameraId=$chIndex';
         }
       } catch (_) {
-        customStreamUrl = 'http://100.31.90.51:8080/api/v1/devices/$terminalId/live-stream?cameraId=$chIndex';
+        customStreamUrl = 'http://3.85.81.10:8080/api/v1/devices/$terminalId/live-stream?cameraId=$chIndex';
       }
     } else {
-      customStreamUrl = 'http://100.31.90.51:3000/media/live/${terminalId}_$activeChannel/live.m3u8';
+      customStreamUrl = 'http://3.85.81.10:8080/media/live/${terminalId}_$activeChannel/live.m3u8';
     }
     notifyListeners();
     fetchDeviceSettings(terminalId);

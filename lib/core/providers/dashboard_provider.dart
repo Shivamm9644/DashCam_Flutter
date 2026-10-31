@@ -99,7 +99,7 @@ class DashboardProvider extends ChangeNotifier {
       List<DeviceItem> serverDevices = [];
       try {
         final loginRes = await http.post(
-          Uri.parse('http://100.31.90.51:3000/api/auth/login'),
+          Uri.parse('http://3.85.81.10:8080/api/v1/auth/login'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'username': 'admin', 'password': 'password'}),
         ).timeout(const Duration(seconds: 3)).catchError((_) => http.Response('{}', 500));
@@ -114,14 +114,14 @@ class DashboardProvider extends ChangeNotifier {
         if (token != null) headers['Authorization'] = 'Bearer $token';
 
         final devRes = await http.get(
-          Uri.parse('http://100.31.90.51:3000/api/devices'),
+          Uri.parse('http://3.85.81.10:8080/api/v1/devices'),
           headers: headers,
         ).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('[]', 500));
 
         if (devRes.statusCode == 200) {
           final List rawDevs = jsonDecode(devRes.body);
           for (var r in rawDevs) {
-            final devId = (r['deviceId'] ?? '').toString().trim();
+            final devId = (r['deviceId'] ?? r['terminalId'] ?? r['imei'] ?? r['id'] ?? '').toString().trim();
             if (devId.isEmpty) continue;
 
             final vNo = (r['vehicleNo'] ?? 'VEH-$devId').toString();
@@ -230,7 +230,7 @@ class DashboardProvider extends ChangeNotifier {
   Future<void> _pollDeviceOnlineStatus() async {
     try {
       final devRes = await http.get(
-        Uri.parse('http://100.31.90.51:3000/api/devices'),
+        Uri.parse('http://3.85.81.10:8080/api/v1/devices'),
       ).timeout(const Duration(seconds: 3)).catchError((_) => http.Response('[]', 500));
 
       if (devRes.statusCode == 200) {
@@ -328,7 +328,7 @@ class DashboardProvider extends ChangeNotifier {
     // 2. Save to central server database (Port 3000 SQLite)
     try {
       final loginRes = await http.post(
-        Uri.parse('http://100.31.90.51:3000/api/auth/login'),
+        Uri.parse('http://3.85.81.10:8080/api/v1/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': 'admin', 'password': 'password'}),
       ).timeout(const Duration(seconds: 3)).catchError((_) => http.Response('{}', 500));
@@ -340,7 +340,7 @@ class DashboardProvider extends ChangeNotifier {
         if (token != null) headers['Authorization'] = 'Bearer $token';
 
         await http.post(
-          Uri.parse('http://100.31.90.51:3000/api/devices'),
+          Uri.parse('http://3.85.81.10:8080/api/v1/devices'),
           headers: headers,
           body: jsonEncode({
             'deviceId': cleanImei,

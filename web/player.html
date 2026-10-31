@@ -199,7 +199,7 @@
 
     chLabel.innerText = ch === '1' ? 'CH1: FRONT ROAD LENS' : 'CH2: REAR / CABIN LENS';
 
-    const streamUrl = `http://100.31.90.51:3000/media/live/${terminalId}_${ch}/live.m3u8`;
+    const streamUrl = `http://3.85.81.10:8080/media/live/${terminalId}_${ch}/live.m3u8`;
 
     // Audio functions
     function enableAudio() {
@@ -261,7 +261,7 @@
     });
 
     // Dashcam audio/video trigger
-    fetch(`http://100.31.90.51:3000/api/video/start-live?terminalId=${terminalId}&dataType=0`).catch(()=>{});
+    fetch(`http://3.85.81.10:8080/api/video/start-live?terminalId=${terminalId}&dataType=0`).catch(()=>{});
 
     let hlsInstance = null;
 

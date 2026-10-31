@@ -9,8 +9,9 @@ class ApiService {
   /// Real Google Maps API Key
   static const String googleMapsApiKey = 'AIzaSyBa6Sfh7UbFlueqmLXSJbWEEoIYoeIpEXs';
 
-  // Live Spring Boot Java Backend (Port 8080) on Cloud Server (100.31.90.51)
-  static const String liveServerBaseUrl = 'http://100.31.90.51:8080/api/v1';
+  // Live Spring Boot Java Backend on Cloud Server (3.85.81.10)
+  static const String serverHost = 'http://3.85.81.10';
+  static const String liveServerBaseUrl = 'http://3.85.81.10:8080/api/v1';
 
   static String get defaultBaseUrl {
     return liveServerBaseUrl;

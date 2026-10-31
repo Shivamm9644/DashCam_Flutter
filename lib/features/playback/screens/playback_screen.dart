@@ -74,7 +74,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
     final camId = _activeChannel == 2 ? 1 : 0;
 
     // Use .m3u8 HLS stream from RoadEazy or Port 3000 JT1078 media server
-    final streamUrl = 'http://100.31.90.51:3000/media/live/${terminalId}_$_activeChannel/live.m3u8';
+    final streamUrl = 'http://3.85.81.10:8080/media/live/${terminalId}_$_activeChannel/live.m3u8';
 
     try {
       _videoController = VideoPlayerController.networkUrl(

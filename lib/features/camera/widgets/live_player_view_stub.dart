@@ -71,7 +71,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
       final camId = (widget.channel == 2) ? 1 : 0;
       final roadeazyRes = await http
           .post(
-            Uri.parse('http://100.31.90.51:8080/api/v1/devices/${widget.terminalId}/live-stream?cameraId=$camId'),
+            Uri.parse('http://3.85.81.10:8080/api/v1/devices/${widget.terminalId}/live-stream?cameraId=$camId'),
             headers: {'Content-Type': 'application/json'},
           )
           .timeout(const Duration(seconds: 4))
@@ -89,7 +89,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
         if (_authToken == null) {
           final loginRes = await http
               .post(
-                Uri.parse('http://100.31.90.51:3000/api/auth/login'),
+                Uri.parse('http://3.85.81.10:8080/api/auth/login'),
                 headers: {'Content-Type': 'application/json'},
                 body: jsonEncode({'username': 'admin', 'password': 'password'}),
               )
@@ -103,7 +103,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
         }
 
         final startUrl = Uri.parse(
-            'http://100.31.90.51:3000/api/video/start-live?terminalId=${widget.terminalId}&channel=${widget.channel}&dataType=0');
+            'http://3.85.81.10:8080/api/video/start-live?terminalId=${widget.terminalId}&channel=${widget.channel}&dataType=0');
         final headers = <String, String>{};
         if (_authToken != null) {
           headers['Authorization'] = 'Bearer $_authToken';
@@ -114,13 +114,13 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           final sData = jsonDecode(socketRes.body);
           if (sData['streamUrl'] != null) {
             final path = sData['streamUrl'].toString();
-            streamUrl = path.startsWith('http') ? path : 'http://100.31.90.51:3000$path';
+            streamUrl = path.startsWith('http') ? path : 'http://3.85.81.10:8080$path';
           }
         }
       } catch (_) {}
 
       // Fallback default HLS endpoint
-      streamUrl ??= 'http://100.31.90.51:3000/media/live/${widget.terminalId}_${widget.channel}/live.m3u8';
+      streamUrl ??= 'http://3.85.81.10:8080/media/live/${widget.terminalId}_${widget.channel}/live.m3u8';
 
       if (mounted) {
         setState(() {
@@ -130,7 +130,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
 
       await _attachPlayer(streamUrl);
     } catch (e) {
-      streamUrl ??= 'http://100.31.90.51:3000/media/live/${widget.terminalId}_${widget.channel}/live.m3u8';
+      streamUrl ??= 'http://3.85.81.10:8080/media/live/${widget.terminalId}_${widget.channel}/live.m3u8';
       await _attachPlayer(streamUrl);
     }
   }
@@ -188,7 +188,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
     _controller?.pause();
     _controller?.dispose();
     try {
-      http.get(Uri.parse('http://100.31.90.51:3000/api/video/stop-live?terminalId=${widget.terminalId}&channel=${widget.channel}')).timeout(const Duration(seconds: 2)).catchError((_) => http.Response('{}', 200));
+      http.get(Uri.parse('http://3.85.81.10:8080/api/video/stop-live?terminalId=${widget.terminalId}&channel=${widget.channel}')).timeout(const Duration(seconds: 2)).catchError((_) => http.Response('{}', 200));
     } catch (_) {}
     super.dispose();
   }
