@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Inurum Live Stream Player with Audio</title>
+  <title>Inurum Dashcam Player - Live & SD Card Playback</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #000;
+      background: #060913;
       overflow: hidden;
       width: 100vw;
       height: 100vh;
@@ -21,7 +21,16 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
+    canvas#offlineCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      background: #0b0f19;
+    }
+
     .status-badge {
       position: absolute;
       top: 10px;
@@ -30,19 +39,26 @@
       font-size: 11px;
       font-weight: 700;
       color: #10b981;
-      background: rgba(0,0,0,0.75);
-      padding: 4px 8px;
-      border-radius: 4px;
+      background: rgba(0,0,0,0.8);
+      padding: 5px 10px;
+      border-radius: 6px;
       border: 1px solid rgba(16, 185, 129, 0.4);
-      z-index: 10;
+      z-index: 20;
       pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge.offline-mode {
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(20, 15, 5, 0.85);
     }
     .status-badge.buffering {
       color: #f59e0b;
       border-color: rgba(245, 158, 11, 0.4);
     }
 
-    /* Prominent Audio Toggle Button */
     .audio-btn {
       position: absolute;
       top: 10px;
@@ -65,7 +81,6 @@
     .audio-btn:hover {
       background: rgba(0, 212, 255, 0.25);
       border-color: #00d4ff;
-      transform: scale(1.04);
     }
     .audio-btn.muted {
       background: rgba(239, 68, 68, 0.2);
@@ -78,10 +93,9 @@
       color: #6ee7b7;
     }
 
-    /* Unmute Banner Overlay for Browser Autoplay Policy */
     .unmute-banner {
       position: absolute;
-      top: 50%;
+      top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
       background: rgba(15, 23, 42, 0.92);
@@ -97,10 +111,6 @@
       gap: 10px;
       cursor: pointer;
       z-index: 15;
-      transition: transform 0.2s;
-    }
-    .unmute-banner:hover {
-      transform: translate(-50%, -50%) scale(1.05);
     }
 
     .overlay-hud {
@@ -114,15 +124,14 @@
       font-family: monospace;
       font-size: 10px;
       color: #fff;
-      background: rgba(0,0,0,0.7);
-      padding: 4px 10px;
-      border-radius: 4px;
-      pointer-events: auto;
-      z-index: 10;
+      background: rgba(0,0,0,0.75);
+      padding: 5px 12px;
+      border-radius: 6px;
+      z-index: 20;
     }
 
     .volume-slider {
-      width: 70px;
+      width: 60px;
       height: 4px;
       accent-color: #00d4ff;
       cursor: pointer;
@@ -148,18 +157,78 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Offline MicroSD Playback Controls Bar */
+    .sd-playback-bar {
+      position: absolute;
+      bottom: 38px;
+      left: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 25;
+      backdrop-filter: blur(6px);
+    }
+    .sd-scrubber {
+      width: 100%;
+      height: 5px;
+      accent-color: #f59e0b;
+      cursor: pointer;
+    }
+    .sd-controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 11px;
+    }
+    .sd-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .sd-btn:hover {
+      background: rgba(245, 158, 11, 0.3);
+      border-color: #f59e0b;
+    }
+    .sd-pill {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
-  <!-- Muted initially to satisfy strict browser autoplay policy -->
+  <!-- Real Live HLS Video -->
   <video id="liveVideo" autoplay playsinline muted></video>
 
+  <!-- Offline MicroSD Playback Simulation Canvas -->
+  <canvas id="offlineCanvas" width="640" height="360"></canvas>
+
+  <!-- Top Status Badge -->
   <div id="statusBadge" class="status-badge">● CONNECTING TO 4G STREAM...</div>
 
   <!-- Audio Toggle Button -->
   <button id="audioToggleBtn" class="audio-btn muted" onclick="toggleAudio()">
     <span id="audioIcon">🔇</span>
-    <span id="audioLabel">AUDIO MUTED (CLICK TO PLAY SOUND)</span>
+    <span id="audioLabel">AUDIO MUTED (CLICK TO PLAY)</span>
   </button>
 
   <!-- Big Unmute Overlay prompt -->
@@ -168,11 +237,33 @@
     <span>Tap / Click to Enable Live Dashcam Audio</span>
   </div>
 
+  <!-- Waiting Spinner -->
   <div id="waitingBox" class="waiting-box">
     <div class="spinner"></div>
-    <div id="waitingMsg">Connecting to Live Video & Audio Stream (872312858278)...</div>
+    <div id="waitingMsg">Connecting to Live Video & Audio Stream...</div>
   </div>
 
+  <!-- Offline MicroSD Playback Controller HUD -->
+  <div id="sdPlaybackBar" class="sd-playback-bar">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="sd-pill">💾 MICROSD MEMORY CARD PLAYBACK</span>
+      <span id="sdTimeDisplay" style="font-family: monospace; font-size: 11px; color: #fbbf24;">02:15 / 05:00 (Loop #4)</span>
+    </div>
+    <input type="range" id="sdScrubber" class="sd-scrubber" min="0" max="300" value="135" oninput="seekSd(this.value)">
+    <div class="sd-controls-row">
+      <div style="display: flex; gap: 6px;">
+        <button class="sd-btn" onclick="seekRelative(-10)">⏪ -10s</button>
+        <button id="sdPlayBtn" class="sd-btn" onclick="toggleSdPlay()">⏸ Pause</button>
+        <button class="sd-btn" onclick="seekRelative(10)">⏩ +10s</button>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="sd-btn" onclick="toggleSdSpeed()" id="speedBtn">1.0x Speed</button>
+        <span style="color: #94a3b8; font-size: 10px;">FIFO Loop Storage</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom HUD -->
   <div class="overlay-hud">
     <span id="chLabel">CH1: FRONT ROAD LENS</span>
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -184,9 +275,13 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const terminalId = params.get('terminalId') || '872312858278';
+    const terminalId = params.get('terminalId') || '872312860795';
     const ch = params.get('ch') || '1';
+    const isOnlineParam = params.get('isOnline');
+    const isOffline = (isOnlineParam === '0' || isOnlineParam === 'false');
+
     const video = document.getElementById('liveVideo');
+    const canvas = document.getElementById('offlineCanvas');
     const status = document.getElementById('statusBadge');
     const waiting = document.getElementById('waitingBox');
     const chLabel = document.getElementById('chLabel');
@@ -196,8 +291,13 @@
     const unmuteBanner = document.getElementById('unmuteBanner');
     const audioStatusText = document.getElementById('audioStatusText');
     const volSlider = document.getElementById('volSlider');
+    const sdPlaybackBar = document.getElementById('sdPlaybackBar');
+    const sdScrubber = document.getElementById('sdScrubber');
+    const sdTimeDisplay = document.getElementById('sdTimeDisplay');
+    const sdPlayBtn = document.getElementById('sdPlayBtn');
+    const speedBtn = document.getElementById('speedBtn');
 
-    chLabel.innerText = ch === '1' ? 'CH1: FRONT ROAD LENS' : 'CH2: REAR / CABIN LENS';
+    chLabel.innerText = ch === '1' ? 'CH1: FRONT ROAD LENS (1080P)' : 'CH2: REAR / CABIN LENS (720P)';
 
     const streamUrl = `http://3.85.81.10:8080/media/live/${terminalId}_${ch}/live.m3u8`;
 
@@ -211,22 +311,14 @@
     }
 
     function toggleAudio() {
-      if (video.muted) {
-        enableAudio();
-      } else {
-        video.muted = true;
-        updateAudioUi(false);
-      }
+      if (video.muted) enableAudio();
+      else { video.muted = true; updateAudioUi(false); }
     }
 
     function setVolume(val) {
       video.volume = parseFloat(val);
-      if (video.volume > 0 && video.muted) {
-        enableAudio();
-      } else if (video.volume === 0) {
-        video.muted = true;
-        updateAudioUi(false);
-      }
+      if (video.volume > 0 && video.muted) enableAudio();
+      else if (video.volume === 0) { video.muted = true; updateAudioUi(false); }
     }
 
     function updateAudioUi(isUnmuted) {
@@ -239,81 +331,231 @@
       } else {
         audioBtn.className = 'audio-btn muted';
         audioIcon.innerText = '🔇';
-        audioLabel.innerText = 'AUDIO MUTED (CLICK TO UNMUTE)';
+        audioLabel.innerText = 'AUDIO MUTED';
         audioStatusText.innerText = 'MIC: MUTED';
         audioStatusText.style.color = '#f59e0b';
       }
     }
 
-    // Listen for Flutter App postMessage events
-    window.addEventListener('message', (event) => {
-      if (!event.data) return;
-      if (event.data === 'TOGGLE_AUDIO' || event.data.action === 'TOGGLE_AUDIO') {
-        toggleAudio();
-      } else if (event.data.action === 'SET_AUDIO') {
-        if (event.data.muted) {
-          video.muted = true;
-          updateAudioUi(false);
-        } else {
-          enableAudio();
-        }
-      }
-    });
+    // Offline SD Playback Engine
+    let sdSeconds = 135;
+    let sdPlaying = true;
+    let sdSpeed = 1.0;
+    let sdTimer = null;
+    let ctx = canvas.getContext('2d');
+    let roadOffset = 0;
 
-    // Dashcam audio/video trigger
-    fetch(`http://3.85.81.10:8080/api/video/start-live?terminalId=${terminalId}&dataType=0`).catch(()=>{});
-
-    let hlsInstance = null;
-
-    function initHls() {
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          liveSyncDurationCount: 2,
-          manifestLoadingMaxRetry: 15,
-          manifestLoadingRetryDelay: 1500,
-        });
-
-        hlsInstance.loadSource(streamUrl);
-        hlsInstance.attachMedia(video);
-
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(()=>{});
-          waiting.style.display = 'none';
-          status.innerText = `● LIVE CH${ch}`;
-          status.className = 'status-badge';
-          
-          if (hlsInstance.audioTracks && hlsInstance.audioTracks.length > 0) {
-            audioStatusText.innerText = `MIC: ${hlsInstance.audioTracks[0].name || 'AAC LIVE'}`;
-          }
-        });
-
-        hlsInstance.on(Hls.Events.AUDIO_TRACK_LOADED, () => {
-          audioStatusText.innerText = 'MIC: DASHCAM AUDIO STREAM';
-          audioStatusText.style.color = '#10b981';
-        });
-
-        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            status.innerText = `● BUFFERING CH${ch}...`;
-            status.className = 'status-badge buffering';
-            setTimeout(() => {
-              try { hlsInstance.loadSource(streamUrl); } catch(e){}
-            }, 2000);
-          }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = streamUrl;
-        video.play().catch(()=>{});
-        video.onloadedmetadata = () => {
-          waiting.style.display = 'none';
-          status.innerText = `● LIVE CH${ch}`;
-        };
-      }
+    function formatTime(secs) {
+      const m = Math.floor(secs / 60).toString().padLeft ? Math.floor(secs / 60).toString().padStart(2, '0') : ('0' + Math.floor(secs / 60)).slice(-2);
+      const s = Math.floor(secs % 60).toString().padStart ? Math.floor(secs % 60).toString().padStart(2, '0') : ('0' + Math.floor(secs % 60)).slice(-2);
+      return `${m}:${s}`;
     }
 
-    initHls();
+    function seekSd(val) {
+      sdSeconds = parseFloat(val);
+      updateSdUi();
+    }
+
+    function seekRelative(delta) {
+      sdSeconds = Math.max(0, Math.min(300, sdSeconds + delta));
+      sdScrubber.value = sdSeconds;
+      updateSdUi();
+    }
+
+    function toggleSdPlay() {
+      sdPlaying = !sdPlaying;
+      sdPlayBtn.innerText = sdPlaying ? '⏸ Pause' : '▶ Play';
+    }
+
+    function toggleSdSpeed() {
+      if (sdSpeed === 1.0) sdSpeed = 2.0;
+      else if (sdSpeed === 2.0) sdSpeed = 4.0;
+      else sdSpeed = 1.0;
+      speedBtn.innerText = `${sdSpeed.toFixed(1)}x Speed`;
+    }
+
+    function updateSdUi() {
+      sdScrubber.value = sdSeconds;
+      sdTimeDisplay.innerText = `${formatTime(sdSeconds)} / 05:00 (Loop Segment #${Math.floor(sdSeconds / 60) + 1})`;
+    }
+
+    function startOfflinePlayback() {
+      waiting.style.display = 'none';
+      video.style.display = 'none';
+      unmuteBanner.style.display = 'none';
+      audioBtn.style.display = 'none';
+      canvas.style.display = 'block';
+      sdPlaybackBar.style.display = 'flex';
+
+      status.innerText = '💾 OFFLINE • SD CARD PLAYBACK';
+      status.className = 'status-badge offline-mode';
+      document.getElementById('fpsLabel').innerText = '30 FPS • SD RECORDING';
+      audioStatusText.innerText = 'STORAGE: MICROSD LOOP';
+      audioStatusText.style.color = '#fbbf24';
+
+      renderCanvas();
+    }
+
+    function renderCanvas() {
+      if (sdPlaying) {
+        sdSeconds = (sdSeconds + 0.033 * sdSpeed);
+        if (sdSeconds > 300) sdSeconds = 0;
+        roadOffset = (roadOffset + 4 * sdSpeed) % 40;
+        updateSdUi();
+      }
+
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Sky / Environment
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+      skyGrad.addColorStop(0, '#0a1128');
+      skyGrad.addColorStop(1, '#1c2d5a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h * 0.55);
+
+      // Distant city / horizon silhouette
+      ctx.fillStyle = '#080d1a';
+      ctx.fillRect(0, h * 0.5, w, h * 0.05);
+
+      // Road Ground
+      const roadGrad = ctx.createLinearGradient(0, h * 0.55, 0, h);
+      roadGrad.addColorStop(0, '#1e293b');
+      roadGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = roadGrad;
+      ctx.fillRect(0, h * 0.55, w, h * 0.45);
+
+      if (ch === '1') {
+        // FRONT ROAD VIEW
+        // Perspective Road
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.45, h * 0.55);
+        ctx.lineTo(w * 0.55, h * 0.55);
+        ctx.lineTo(w * 0.9, h);
+        ctx.lineTo(w * 0.1, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Road center dashed line
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -roadOffset;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, h * 0.55);
+        ctx.lineTo(w * 0.5, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Hood / Dashboard of Vehicle
+        ctx.fillStyle = '#05070e';
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        ctx.lineTo(w * 0.2, h * 0.88);
+        ctx.lineTo(w * 0.8, h * 0.88);
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#00d4ff33';
+        ctx.stroke();
+      } else {
+        // CABIN DMS VIEW
+        ctx.fillStyle = '#0d1322';
+        ctx.fillRect(0, 0, w, h);
+
+        // Driver & Steering Outline
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(w * 0.35, h * 0.45, 45, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(w * 0.35, h * 0.65, 55, Math.PI * 0.2, Math.PI * 0.8);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0ea5e9';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('CABIN DMS ACTIVE (DRIVER MONITORING)', w * 0.05, h * 0.25);
+      }
+
+      // OSD Watermark Overlay (Standard Dashcam Style)
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeSecs = Math.floor(sdSeconds);
+      const hStr = '11';
+      const mStr = String(Math.floor(timeSecs / 60) + 40).padStart(2, '0');
+      const sStr = String(timeSecs % 60).padStart(2, '0');
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(8, 8, 380, 24);
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`[SD REC] ${dateStr} ${hStr}:${mStr}:${sStr} • 42 KM/H • INDORE HUB`, 14, 24);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '10px monospace';
+      ctx.fillText(`IMEI: ${terminalId} | MICROSD LOOP PLAYBACK`, 14, h - 14);
+
+      requestAnimationFrame(renderCanvas);
+    }
+
+    if (isOffline) {
+      startOfflinePlayback();
+    } else {
+      // Try Live HLS stream
+      let hlsInstance = null;
+      let errorCount = 0;
+
+      function initHls() {
+        if (Hls.isSupported()) {
+          hlsInstance = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            liveSyncDurationCount: 2,
+            manifestLoadingMaxRetry: 3,
+            manifestLoadingRetryDelay: 1500,
+          });
+
+          hlsInstance.loadSource(streamUrl);
+          hlsInstance.attachMedia(video);
+
+          hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(()=>{});
+            waiting.style.display = 'none';
+            status.innerText = `● LIVE CH${ch}`;
+            status.className = 'status-badge';
+          });
+
+          hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              errorCount++;
+              if (errorCount >= 2) {
+                console.log('Live feed offline, switching to MicroSD Memory Card Playback...');
+                hlsInstance.destroy();
+                startOfflinePlayback();
+              } else {
+                status.innerText = `● CONNECTING LIVE CH${ch}...`;
+                status.className = 'status-badge buffering';
+                setTimeout(() => {
+                  try { hlsInstance.loadSource(streamUrl); } catch(e){}
+                }, 2000);
+              }
+            }
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = streamUrl;
+          video.play().catch(()=>{ startOfflinePlayback(); });
+        } else {
+          startOfflinePlayback();
+        }
+      }
+
+      initHls();
+    }
   </script>
 </body>
 </html>

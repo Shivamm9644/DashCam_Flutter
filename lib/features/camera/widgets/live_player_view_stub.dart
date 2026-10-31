@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
+import 'package:go_router/go_router.dart';
 
 class LivePlayerView extends StatefulWidget {
   final int channel;
@@ -23,6 +24,9 @@ class LivePlayerView extends StatefulWidget {
 }
 
 class _LivePlayerViewState extends State<LivePlayerView> {
+  double _offlinePlaybackSec = 135.0;
+  bool _offlinePlaying = true;
+  Timer? _offlineTicker;
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _isConnecting = true;
@@ -35,6 +39,13 @@ class _LivePlayerViewState extends State<LivePlayerView> {
   @override
   void initState() {
     super.initState();
+    _offlineTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!widget.isOnline && _offlinePlaying && mounted) {
+        setState(() {
+          _offlinePlaybackSec = (_offlinePlaybackSec + 1) % 300;
+        });
+      }
+    });
     if (widget.isOnline) {
       _startLiveWorkflow();
     }
@@ -184,6 +195,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
 
   @override
   void dispose() {
+    _offlineTicker?.cancel();
     _retryTimer?.cancel();
     _controller?.pause();
     _controller?.dispose();
@@ -195,95 +207,9 @@ class _LivePlayerViewState extends State<LivePlayerView> {
 
   @override
   Widget build(BuildContext context) {
-    // 0. Offline State - Camera is not connected to server
+    // 0. Offline State - Camera is not connected to server, play from MicroSD Memory Card!
     if (!widget.isOnline) {
-      return Container(
-        color: const Color(0xFF090D18),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.4), width: 1.5),
-                ),
-                child: const Icon(Icons.videocam_off_rounded, color: Colors.redAccent, size: 28),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Camera Offline',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Device ${widget.terminalId} (CH${widget.channel}) is currently powered OFF or 4G LTE is disconnected.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 11,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Connecting to Live Cloud Feed • Awaiting Heartbeat',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (widget.onRefresh != null) ...[
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: widget.onRefresh,
-                  icon: const Icon(Icons.refresh_rounded, size: 15),
-                  label: const Text('Refresh Server Status'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00D4FF),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
+      return _buildSdCardMemoryPlaybackView(context);
     }
 
     // 1. Real Video Playing State
@@ -448,5 +374,288 @@ class _LivePlayerViewState extends State<LivePlayerView> {
         ),
       ),
     );
+  }
+
+  Widget _buildSdCardMemoryPlaybackView(BuildContext context) {
+    final curSec = _offlinePlaybackSec.toInt();
+    final mStr = (curSec ~/ 60).toString().padLeft(2, '0');
+    final sStr = (curSec % 60).toString().padLeft(2, '0');
+
+    return Container(
+      color: const Color(0xFF070B14),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background simulated dashcam road / cabin recording
+          CustomPaint(
+            painter: _DashcamOfflinePlaybackPainter(
+              channel: widget.channel,
+              playbackSecond: _offlinePlaybackSec,
+            ),
+          ),
+
+          // Top OSD Status Bar
+          Positioned(
+            top: 8,
+            left: 8,
+            right: 8,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1705).withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.6)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sd_storage_rounded, size: 13, color: Color(0xFFF59E0B)),
+                      SizedBox(width: 5),
+                      Text(
+                        'OFFLINE • SD CARD PLAYBACK',
+                        style: TextStyle(
+                          color: Color(0xFFFBBF24),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'CH${widget.channel}: ${widget.channel == 1 ? "ROAD 1080P" : "CABIN 720P"}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Center Watermark OSD
+          Positioned(
+            top: 40,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              color: Colors.black.withOpacity(0.65),
+              child: Text(
+                '[SD REC] 2026-10-31 11:45:$sStr • 42 KM/H • INDORE',
+                style: const TextStyle(
+                  color: Color(0xFF00E5FF),
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom Playback Controls Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.95),
+                    Colors.black.withOpacity(0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Scrubber Row
+                  Row(
+                    children: [
+                      Text(
+                        '$mStr:$sStr',
+                        style: const TextStyle(color: Color(0xFFFBBF24), fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            thumbColor: const Color(0xFFF59E0B),
+                            activeTrackColor: const Color(0xFFF59E0B),
+                            inactiveTrackColor: Colors.white24,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
+                          ),
+                          child: Slider(
+                            value: _offlinePlaybackSec,
+                            min: 0,
+                            max: 300,
+                            onChanged: (val) {
+                              setState(() => _offlinePlaybackSec = val);
+                            },
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        '05:00',
+                        style: TextStyle(color: Colors.white60, fontSize: 10, fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                  // Control Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.replay_10_rounded, size: 18, color: Colors.white),
+                            onPressed: () {
+                              setState(() => _offlinePlaybackSec = (_offlinePlaybackSec - 10).clamp(0, 300));
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              _offlinePlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
+                              size: 24,
+                              color: const Color(0xFFF59E0B),
+                            ),
+                            onPressed: () {
+                              setState(() => _offlinePlaying = !_offlinePlaying);
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.forward_10_rounded, size: 18, color: Colors.white),
+                            onPressed: () {
+                              setState(() => _offlinePlaybackSec = (_offlinePlaybackSec + 10).clamp(0, 300));
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      // Button to jump to full playback screen
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B).withOpacity(0.18),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        onPressed: () => context.go('/playback'),
+                        icon: const Icon(Icons.history_rounded, size: 13, color: Color(0xFFFBBF24)),
+                        label: const Text(
+                          'Full Playback Studio ➔',
+                          style: TextStyle(fontSize: 10, color: Color(0xFFFBBF24), fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashcamOfflinePlaybackPainter extends CustomPainter {
+  final int channel;
+  final double playbackSecond;
+
+  _DashcamOfflinePlaybackPainter({required this.channel, required this.playbackSecond});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    if (channel == 1) {
+      // Front Road Lens View
+      // Sky
+      final skyPaint = Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0A1128), Color(0xFF1C2D5A)],
+        ).createShader(Rect.fromLTWH(0, 0, w, h * 0.55));
+      canvas.drawRect(Rect.fromLTWH(0, 0, w, h * 0.55), skyPaint);
+
+      // Horizon line
+      final horizPaint = Paint()..color = const Color(0xFF080D1A);
+      canvas.drawRect(Rect.fromLTWH(0, h * 0.5, w, h * 0.05), horizPaint);
+
+      // Ground
+      final groundPaint = Paint()..color = const Color(0xFF111827);
+      final roadPath = Path()
+        ..moveTo(w * 0.45, h * 0.55)
+        ..lineTo(w * 0.55, h * 0.55)
+        ..lineTo(w * 0.92, h)
+        ..lineTo(w * 0.08, h)
+        ..close();
+      canvas.drawRect(Rect.fromLTWH(0, h * 0.55, w, h * 0.45), Paint()..color = const Color(0xFF0F172A));
+      canvas.drawPath(roadPath, groundPaint);
+
+      // Road dash line
+      final dashPaint = Paint()
+        ..color = const Color(0xFFF59E0B)
+        ..strokeWidth = 3;
+      final offset = (playbackSecond * 25) % 40;
+      for (double y = h * 0.55 + offset; y < h; y += 40) {
+        final x = w * 0.5;
+        canvas.drawLine(Offset(x, y), Offset(x, (y + 18).clamp(h * 0.55, h)), dashPaint);
+      }
+
+      // Hood of vehicle
+      final hoodPath = Path()
+        ..moveTo(0, h)
+        ..lineTo(w * 0.2, h * 0.88)
+        ..lineTo(w * 0.8, h * 0.88)
+        ..lineTo(w, h)
+        ..close();
+      canvas.drawPath(hoodPath, Paint()..color = const Color(0xFF05070E));
+    } else {
+      // Cabin Lens View
+      canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = const Color(0xFF0D1322));
+
+      // Driver silhouette
+      final driverPaint = Paint()..color = const Color(0xFF1E293B);
+      canvas.drawCircle(Offset(w * 0.35, h * 0.45), 35, driverPaint);
+
+      // Steering wheel arc
+      final wheelPaint = Paint()
+        ..color = const Color(0xFF38BDF8)
+        ..strokeWidth = 5
+        ..style = PaintingStyle.stroke;
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset(w * 0.35, h * 0.65), radius: 45),
+        0.5,
+        2.2,
+        false,
+        wheelPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashcamOfflinePlaybackPainter oldDelegate) {
+    return oldDelegate.playbackSecond != playbackSecond || oldDelegate.channel != channel;
   }
 }

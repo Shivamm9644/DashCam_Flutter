@@ -517,6 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final imeiController = TextEditingController(text: '872312860795');
     final plateController = TextEditingController(text: 'Customer Dashcam (VEH-0795)');
     final driverController = TextEditingController(text: 'Primary Owner');
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -630,47 +631,270 @@ class _DashboardScreenState extends State<DashboardScreen>
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  onPressed: () async {
-                    final imei = imeiController.text.trim();
-                    final plate = plateController.text.trim().isEmpty ? 'Dashcam ($imei)' : plateController.text.trim();
-                    final driver = driverController.text.trim().isEmpty ? 'Owner' : driverController.text.trim();
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final imei = imeiController.text.trim();
+                          final plate = plateController.text.trim().isEmpty ? 'Dashcam ($imei)' : plateController.text.trim();
+                          final driver = driverController.text.trim().isEmpty ? 'Owner' : driverController.text.trim();
 
-                    if (imei.isNotEmpty) {
-                      await dash.assignNewDevice(
-                        imei: imei,
-                        plate: plate,
-                        driver: driver,
-                        deviceType: 'Dual-Lens Dashcam',
-                      );
-                      await dp.selectServerDevice(imei, plate);
+                          if (imei.isNotEmpty) {
+                            setSheetState(() => isSubmitting = true);
+                            final newDevice = await dash.assignNewDevice(
+                              imei: imei,
+                              plate: plate,
+                              driver: driver,
+                              deviceType: 'Dual-Lens Dashcam',
+                            );
+                            await dp.selectServerDevice(imei, plate);
 
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF0F291E),
-                            content: Row(
-                              children: [
-                                const Icon(Icons.check_circle_rounded, color: AppTheme.statusOnline, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text('Dashcam $imei assigned & selected!')),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text(
-                    'Assign & Activate Camera',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              if (newDevice != null) {
+                                _showAssignmentResultDialog(context, newDevice, dash, dp);
+                              }
+                            }
+                          }
+                        },
+                  child: isSubmitting
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black)),
+                            SizedBox(width: 10),
+                            Text('Checking Server & Assigning...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        )
+                      : const Text(
+                          'Assign & Activate Camera',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showAssignmentResultDialog(
+    BuildContext context,
+    DeviceItem device,
+    DashboardProvider dash,
+    DeviceProvider dp,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dCtx, setModalState) {
+            // Read latest device status from dashboard provider
+            final currentDev = dash.devices.firstWhere(
+              (d) => d.terminalId == device.terminalId,
+              orElse: () => device,
+            );
+            final isOnline = currentDev.isOnline;
+
+            return Dialog(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isOnline ? AppTheme.statusOnline.withOpacity(0.5) : AppTheme.accentOrange.withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header Row
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (isOnline ? AppTheme.statusOnline : AppTheme.accentOrange).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isOnline ? Icons.videocam_rounded : Icons.sd_storage_rounded,
+                            color: isOnline ? AppTheme.statusOnline : AppTheme.accentOrange,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Camera Assigned Successfully!',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              Text(
+                                '${currentDev.plate} (IMEI: ${currentDev.terminalId})',
+                                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 20),
+                          onPressed: () => Navigator.pop(dialogCtx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Big Status Banner Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: (isOnline ? const Color(0xFF064E3B) : const Color(0xFF451A03)).withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (isOnline ? AppTheme.statusOnline : AppTheme.accentOrange).withOpacity(0.4),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: isOnline ? AppTheme.statusOnline : AppTheme.accentOrange,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isOnline ? 'CAMERA STATUS: ONLINE' : 'CAMERA STATUS: OFFLINE',
+                                style: TextStyle(
+                                  color: isOnline ? AppTheme.statusOnline : AppTheme.accentOrange,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isOnline
+                                ? 'Dashcam ${currentDev.terminalId} is actively connected. Dual-lens live video pipeline (CH1 Road + CH2 Cabin) is ready to stream!'
+                                : 'Dashcam ${currentDev.terminalId} is currently OFFLINE (ignition off or parked). Showing recorded playback from MicroSD Memory Card.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Color(0xFFCBD5E1),
+                              fontSize: 11,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Quick Toggle for testing Online/Offline
+                    InkWell(
+                      onTap: () {
+                        dash.toggleDeviceOnlineStatus(currentDev.terminalId);
+                        setModalState(() {});
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.sync_rounded, size: 13, color: AppTheme.accentCyan),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Test Mode: Switch to ${isOnline ? "OFFLINE (Memory Card)" : "ONLINE (Live Feed)"}',
+                              style: const TextStyle(fontSize: 10, color: AppTheme.accentCyan, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Primary Action Button (Live feed if online, Playback if offline)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        icon: Icon(
+                          isOnline ? Icons.videocam_rounded : Icons.play_circle_filled_rounded,
+                          size: 18,
+                        ),
+                        label: Text(
+                          isOnline ? 'Watch Live Video Feed ▶' : 'View SD Card Memory Playback 💾',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isOnline ? AppTheme.accentCyan : const Color(0xFFF59E0B),
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 3,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(dialogCtx);
+                          if (isOnline) {
+                            context.go('/camera');
+                          } else {
+                            context.go('/playback');
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Secondary Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 38,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(dialogCtx);
+                          if (isOnline) {
+                            context.go('/playback');
+                          } else {
+                            context.go('/camera');
+                          }
+                        },
+                        child: Text(
+                          isOnline ? 'Go to SD Card Playback' : 'Go to Camera Live Screen',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

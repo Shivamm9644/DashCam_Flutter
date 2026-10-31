@@ -282,26 +282,55 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   // Self-Service Camera Assignment by Customer - Saves to Local & Cloud Database
-  Future<bool> assignNewDevice({
+  Future<DeviceItem?> assignNewDevice({
     required String imei,
     required String plate,
     String? driver,
     String? deviceType,
+    bool? forceOnline,
   }) async {
     final cleanImei = imei.trim();
     final cleanPlate = plate.trim();
-    if (cleanImei.isEmpty || cleanPlate.isEmpty) return false;
+    if (cleanImei.isEmpty || cleanPlate.isEmpty) return null;
 
     // Check server if this device is online right now
-    String initialStatus = 'OFFLINE';
-    String initialPing = 'Registered • Connecting...';
+    String initialStatus = (forceOnline == true) ? 'ONLINE' : 'OFFLINE';
+    String initialPing = (initialStatus == 'ONLINE')
+        ? 'Live • 4G Cloud (JT1078)'
+        : 'MicroSD Memory Card Ready • Standby';
+
+    if (forceOnline == null) {
+      try {
+        final devRes = await http.get(
+          Uri.parse('http://3.85.81.10:8080/api/v1/devices'),
+        ).timeout(const Duration(seconds: 2)).catchError((_) => http.Response('{"devices":[]}', 500));
+
+        if (devRes.statusCode == 200) {
+          final dynamic decoded = jsonDecode(devRes.body);
+          final List rawDevs = (decoded is List)
+              ? decoded
+              : (decoded is Map && decoded['devices'] is List ? decoded['devices'] : []);
+          for (var r in rawDevs) {
+            final sId = (r['deviceId'] ?? r['terminalId'] ?? r['imei'] ?? r['id'] ?? '').toString().trim();
+            if (sId == cleanImei) {
+              final st = (r['status'] ?? (r['online'] == true ? 'ONLINE' : 'Offline')).toString().toUpperCase();
+              if (st == 'ONLINE' || r['online'] == true) {
+                initialStatus = 'ONLINE';
+                initialPing = 'Live • 4G Cloud (JT1078)';
+              }
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+    }
 
     final newDevice = DeviceItem(
       id: cleanImei,
       plate: '$cleanPlate (${deviceType ?? "Dual-Lens"})',
       terminalId: cleanImei,
       driver: (driver != null && driver.trim().isNotEmpty) ? driver.trim() : 'Self Assigned',
-      speed: 0.0,
+      speed: initialStatus == 'ONLINE' ? 36.0 : 0.0,
       status: initialStatus,
       lat: cleanImei == '872312860795' ? 33.972281 : 28.6139,
       lng: cleanImei == '872312860795' ? -118.088331 : 77.2090,
@@ -325,7 +354,7 @@ class DashboardProvider extends ChangeNotifier {
       await prefs.setString(_activeDevKey, cleanImei);
     } catch (_) {}
 
-    // 2. Save to central server database (Port 3000 SQLite)
+    // 2. Save to central server database
     try {
       final loginRes = await http.post(
         Uri.parse('http://3.85.81.10:8080/api/v1/auth/login'),
@@ -344,6 +373,7 @@ class DashboardProvider extends ChangeNotifier {
           headers: headers,
           body: jsonEncode({
             'deviceId': cleanImei,
+            'terminalId': cleanImei,
             'vehicleNo': cleanPlate,
             'deviceType': deviceType ?? 'MDVR (Dual Cam)',
           }),
@@ -354,7 +384,41 @@ class DashboardProvider extends ChangeNotifier {
     // Immediately trigger server poll to update status
     _pollDeviceOnlineStatus();
 
-    return true;
+    return newDevice;
+  }
+
+  // Quick toggle online/offline for testing
+  void toggleDeviceOnlineStatus(String terminalId) async {
+    final idx = devices.indexWhere((d) => d.terminalId == terminalId);
+    if (idx != -1) {
+      final old = devices[idx];
+      final newOnline = !old.isOnline;
+      final newStatus = newOnline ? 'ONLINE' : 'OFFLINE';
+      final newPing = newOnline ? 'Live • 4G Cloud (JT1078)' : 'MicroSD Memory Card Ready • Standby';
+      devices[idx] = DeviceItem(
+        id: old.id,
+        plate: old.plate,
+        terminalId: old.terminalId,
+        driver: old.driver,
+        speed: newOnline ? 42.0 : 0.0,
+        status: newStatus,
+        lat: old.lat,
+        lng: old.lng,
+        lastPing: newPing,
+        heading: old.heading,
+        altitude: old.altitude,
+        isCustomAssigned: old.isCustomAssigned,
+      );
+      if (selectedDevice?.terminalId == terminalId) {
+        selectedDevice = devices[idx];
+      }
+      _updateCounts();
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_dbKey, jsonEncode(devices.map((d) => d.toJson()).toList()));
+      } catch (_) {}
+    }
   }
 
   Future<void> removeDevice(String terminalId) async {
