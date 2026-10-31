@@ -119,7 +119,10 @@ class DashboardProvider extends ChangeNotifier {
         ).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('[]', 500));
 
         if (devRes.statusCode == 200) {
-          final List rawDevs = jsonDecode(devRes.body);
+          final dynamic decoded = jsonDecode(devRes.body);
+          final List rawDevs = (decoded is List)
+              ? decoded
+              : (decoded is Map && decoded['devices'] is List ? decoded['devices'] : []);
           for (var r in rawDevs) {
             final devId = (r['deviceId'] ?? r['terminalId'] ?? r['imei'] ?? r['id'] ?? '').toString().trim();
             if (devId.isEmpty) continue;
@@ -234,7 +237,10 @@ class DashboardProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 3)).catchError((_) => http.Response('[]', 500));
 
       if (devRes.statusCode == 200) {
-        final List rawDevs = jsonDecode(devRes.body);
+        final dynamic decoded = jsonDecode(devRes.body);
+          final List rawDevs = (decoded is List)
+              ? decoded
+              : (decoded is Map && decoded['devices'] is List ? decoded['devices'] : []);
         bool changed = false;
 
         for (var r in rawDevs) {
