@@ -14,9 +14,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  final _emailCtrl = TextEditingController(text: 'rajesh@apex-logistics.com');
-  final _passwordCtrl = TextEditingController(text: 'demo123');
-  String _selectedRole = 'ADMIN';
+  final _emailCtrl = TextEditingController(text: 'shivam.inurum@gmail.com');
+  final _passwordCtrl = TextEditingController(text: '');
+  String _selectedRole = 'SUPER_ADMIN';
   bool _obscurePassword = true;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -327,9 +327,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ],
                           ),
                           const SizedBox(height: 10),
-                          _demoRow('Super Admin', 'admin@inurum.io'),
-                          _demoRow('Fleet Admin', 'rajesh@apex-logistics.com'),
-                          _demoRow('Customer', 'priya@apex-logistics.com'),
+                          _demoRow('Super Admin', 'shivam.inurum@gmail.com'),
                           const SizedBox(height: 6),
                           Text(
                             'Password: any (demo mode)',

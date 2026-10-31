@@ -514,7 +514,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _showAssignCameraSheet(BuildContext context, DashboardProvider dash, DeviceProvider dp) {
-    final imeiController = TextEditingController(text: '872312860795');
+    final imeiController = TextEditingController();
     final plateController = TextEditingController(text: 'Customer Dashcam (VEH-0795)');
     final driverController = TextEditingController(text: 'Primary Owner');
     bool isSubmitting = false;
@@ -567,7 +567,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(height: 14),
               const Text(
-                'Enter Dashcam IMEI number or tap to quick-fill active device:',
+                'Enter Dashcam IMEI number to assign to vehicle:',
                 style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 8),
@@ -577,13 +577,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 decoration: InputDecoration(
                   labelText: 'Dashcam IMEI / Terminal ID',
                   labelStyle: const TextStyle(color: AppTheme.accentCyan, fontSize: 13),
-                  hintText: 'e.g. 872312860795',
+                  hintText: 'Enter Dashcam IMEI / Terminal ID',
                   prefixIcon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.accentCyan, size: 20),
                   suffixIcon: TextButton(
                     onPressed: () {
-                      setSheetState(() => imeiController.text = '872312860795');
+                      setSheetState(() => imeiController.clear());
                     },
-                    child: const Text('Live IMEI', style: TextStyle(fontSize: 11, color: AppTheme.accentCyan, fontWeight: FontWeight.bold)),
+                    child: const Text('Clear', style: TextStyle(fontSize: 11, color: AppTheme.accentCyan, fontWeight: FontWeight.bold)),
                   ),
                   filled: true,
                   fillColor: AppTheme.bgPrimary,
@@ -598,7 +598,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 decoration: InputDecoration(
                   labelText: 'Vehicle Name / Number Plate',
                   labelStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-                  hintText: 'e.g. Ford Explorer / DL-01-AB-1234',
+                  hintText: 'Enter Vehicle Name / Number Plate',
                   prefixIcon: const Icon(Icons.directions_car_rounded, color: AppTheme.textMuted, size: 20),
                   filled: true,
                   fillColor: AppTheme.bgPrimary,

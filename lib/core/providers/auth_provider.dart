@@ -79,37 +79,20 @@ class AuthProvider extends ChangeNotifier {
         return true;
       } catch (remoteError) {
         // Fallback for offline demo with realistic role mapping
-        final demoUsers = {
-          'SUPER_ADMIN': UserModel(
-            id: 'user-superadmin-001',
-            name: 'Inurum WanWay Master',
-            email: email.isNotEmpty ? email : 'admin@inurum.io',
-            role: 'SUPER_ADMIN',
-            tenantId: 'tenant-inurum-master',
-            tenantName: 'Inurum Global Fleet (WanWay Master)',
-            avatar: 'IM',
-          ),
-          'ADMIN': UserModel(
-            id: 'user-apex-admin-001',
-            name: 'Apex Fleet Manager',
-            email: email.isNotEmpty ? email : 'rajesh@apex-logistics.com',
-            role: 'ADMIN',
-            tenantId: 'tenant-apex',
-            tenantName: 'Apex Logistics Corp',
-            avatar: 'AF',
-          ),
-          'CUSTOMER': UserModel(
-            id: 'user-apex-cust-003',
-            name: 'Retail Customer',
-            email: email.isNotEmpty ? email : 'client@apex-logistics.com',
-            role: 'CUSTOMER',
-            tenantId: 'tenant-apex',
-            tenantName: 'Apex Logistics Corp',
-            avatar: 'RC',
-          ),
-        };
+        
+        final cleanEmail = email.trim().isNotEmpty ? email.trim() : 'shivam.inurum@gmail.com';
+        final derivedName = cleanEmail.contains('@') ? cleanEmail.split('@')[0] : cleanEmail;
+        final tenant = cleanEmail.contains('@') ? cleanEmail.split('@')[1] : 'inurum.com';
+        final fallbackUser = UserModel(
+          id: 'user-${cleanEmail.hashCode.abs()}',
+          name: derivedName,
+          email: cleanEmail,
+          role: role,
+          tenantId: 'tenant-${cleanEmail.hashCode.abs()}',
+          tenantName: 'Inurum Fleet (${tenant})',
+          avatar: derivedName.substring(0, derivedName.length >= 2 ? 2 : derivedName.length).toUpperCase(),
+        );
 
-        final fallbackUser = demoUsers[role] ?? demoUsers['SUPER_ADMIN']!;
         _user = fallbackUser;
         _token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${base64Url.encode(utf8.encode(jsonEncode({"sub": fallbackUser.id, "email": fallbackUser.email, "role": role})))}.fallbackSig';
         _isAuthenticated = true;

@@ -37,8 +37,8 @@ class DeviceProvider extends ChangeNotifier {
   // System Status
   SystemStatus systemStatus = SystemStatus(
     firmware: 'v1.2.6-GD19',
-    imei: '872312860795',
-    simIccid: '8991872312860795001',
+    imei: '',
+    simIccid: '8991001',
     networkType: '4G LTE Cat 4',
     signalStrength: 0,
     voltage: '12.4V',
@@ -51,8 +51,8 @@ class DeviceProvider extends ChangeNotifier {
 
   // GPS Status
   GpsStatus gpsStatus = GpsStatus(
-    lat: 33.972281,
-    lng: -118.088331,
+    lat: 0.0,
+    lng: 0.0,
     altitude: 85,
     speed: 0,
     heading: 0,

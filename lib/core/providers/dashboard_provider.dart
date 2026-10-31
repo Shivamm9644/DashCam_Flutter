@@ -85,12 +85,7 @@ class DashboardProvider extends ChangeNotifier {
           final List decoded = jsonDecode(savedJson);
           localDevices = decoded
               .map((m) => DeviceItem.fromJson(m as Map<String, dynamic>))
-              .where((d) =>
-                  d.driver != 'Shivam Mishra' &&
-                  d.driver != 'Rahul Verma' &&
-                  d.driver != 'Anand Kumar' &&
-                  d.terminalId != '860871080043593' &&
-                  d.terminalId != '860871080043594')
+              
               .toList();
         } catch (_) {}
       }
@@ -131,8 +126,8 @@ class DashboardProvider extends ChangeNotifier {
             final dType = (r['deviceType'] ?? 'Dual Cam Dashcam').toString();
             final st = (r['status'] ?? 'Offline').toString().toUpperCase();
             final lastOnline = (r['lastOnline'] ?? '').toString();
-            final lat = (r['latitude'] != null) ? ((r['latitude'] as num).toDouble()) : 33.972281;
-            final lng = (r['longitude'] != null) ? ((r['longitude'] as num).toDouble()) : -118.088331;
+            final lat = (r['latitude'] != null) ? ((r['latitude'] as num).toDouble()) : 0.0;
+            final lng = (r['longitude'] != null) ? ((r['longitude'] as num).toDouble()) : 0.0;
             final speed = (r['speed'] != null) ? ((r['speed'] as num).toDouble()) : 0.0;
 
             // REAL status strictly from server - no faking!
@@ -186,23 +181,7 @@ class DashboardProvider extends ChangeNotifier {
 
       devices = merged.values.toList();
 
-      if (devices.isEmpty) {
-        devices = [
-          DeviceItem(
-            id: '872312860795',
-            plate: 'VEH-0795 (Dual Cam MDVR)',
-            terminalId: '872312860795',
-            driver: 'Registered Customer',
-            speed: 0.0,
-            status: 'OFFLINE',
-            lat: 33.972281,
-            lng: -118.088331,
-            lastPing: 'Offline • Awaiting 4G Heartbeat',
-            heading: 0,
-            altitude: 0,
-          ),
-        ];
-      }
+      // Clean empty list - no hardcoded dummy devices
 
       if (devices.isNotEmpty) {
         if (activeSavedId != null) {
@@ -338,8 +317,8 @@ class DashboardProvider extends ChangeNotifier {
       driver: (driver != null && driver.trim().isNotEmpty) ? driver.trim() : 'Self Assigned',
       speed: initialStatus == 'ONLINE' ? 36.0 : 0.0,
       status: initialStatus,
-      lat: cleanImei == '872312860795' ? 33.972281 : 28.6139,
-      lng: cleanImei == '872312860795' ? -118.088331 : 77.2090,
+      lat: 0.0,
+      lng: 0.0,
       lastPing: initialPing,
       heading: 0,
       altitude: 0,

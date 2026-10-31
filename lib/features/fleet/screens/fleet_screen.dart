@@ -24,8 +24,8 @@ class _FleetScreenState extends State<FleetScreen> {
     final dp = context.watch<DeviceProvider>();
 
     final activeDev = _selected ?? dash.selectedDevice ?? (dash.devices.isNotEmpty ? dash.devices.first : null);
-    final lat = (activeDev != null && activeDev.lat != 0.0) ? activeDev.lat : 33.972281;
-    final lng = (activeDev != null && activeDev.lng != 0.0) ? activeDev.lng : -118.088331;
+    final lat = (activeDev != null && activeDev.lat != 0.0) ? activeDev.lat : 0.0;
+    final lng = (activeDev != null && activeDev.lng != 0.0) ? activeDev.lng : 0.0;
 
     final filtered = dash.devices.where((d) {
       final matchFilter = _filter == 'ALL' || d.status == _filter;
